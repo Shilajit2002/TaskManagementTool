@@ -1,11 +1,8 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
-import Swal from "sweetalert2";
-// import { useLoaderContext } from "../../Contexts/LoaderContext/LoaderContext";
-// import Loader from "../Loader/Loader";
 import { BACKEND_SERVER } from "../../Helper/BaseUrl";
 
-const Calendar = () => {
+const Calendar = ({ setSendData, attendanceData, setAttendanceData }) => {
   // Data from UseLoaderContext Hook
   // const { setOpenLoader, openLoader } = useLoaderContext();
 
@@ -13,7 +10,6 @@ const Calendar = () => {
   const [currYear, setCurrYear] = useState(date.getFullYear()); // Get current year from date
   const [currMonth, setCurrMonth] = useState(date.getMonth()); // Get current month from date
   const [days, setDays] = useState([]); // State to store the days to be displayed in the calendar
-  const [attendanceData, setAttendanceData] = useState([]); // State to store attendance data fetched from the backend
 
   // Array of month names for display purposes
   const months = [
@@ -35,27 +31,27 @@ const Calendar = () => {
   const nationalHolidays = ["2024-06-16", "2024-07-16"];
 
   // Fetch attendance data from the backend when the component mounts
-  // useEffect(() => {
-  //   // Fetch attendance data from the backend
-  //   const fetchAttendanceData = () => {
-  //     const token = localStorage.getItem("webDualToken");
-  //     const userid = localStorage.getItem("webDualUserid");
-  //     axios
-  //       .get(`${BACKEND_SERVER}/users/get-Calendar/${userid}`, {
-  //         headers: {
-  //           Authorization: `Bearer ${token}`,
-  //         },
-  //       })
-  //       .then((res) => {
-  //         setAttendanceData(res?.data?.attendance || []);
-  //       })
-  //       .catch((err) => {
-  //         console.log(err);
-  //       });
-  //   };
+  useEffect(() => {
+    // Fetch attendance data from the backend
+    const fetchAttendanceData = () => {
+      const token = localStorage.getItem("taskToken");
+      const userid = localStorage.getItem("taskUserId");
+      axios
+        .get(`${BACKEND_SERVER}/users/get-timesheet/${userid}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        .then((res) => {
+          setAttendanceData(res?.data?.attendance || []);
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+    };
 
-  //   fetchAttendanceData();
-  // }, []);
+    fetchAttendanceData();
+  }, [setAttendanceData]);
 
   // Re-render the calendar whenever the current year, month, or attendance data changes
   useEffect(() => {
@@ -113,8 +109,14 @@ const Calendar = () => {
         isLeaveDay,
         isToday,
         workingHours: attendance ? attendance.workingHours : "", // Set working hours or empty string if not found
+        title: attendance ? attendance.title : "", // Set title or empty string if not found
+        description: attendance ? attendance.description : "", // Set description or empty string if not found
         isWeekend: dayDate.getDay() === 0 || dayDate.getDay() === 6, // Check if Saturday or Sunday
       });
+
+      if (daysArray[i].active) {
+        setSendData(daysArray[i]);
+      }
     }
 
     // Add days from the next month to fill the last week
@@ -128,7 +130,7 @@ const Calendar = () => {
     setDays(daysArray); // Update state with the array of day objects
   };
 
-  const handlePrevNext = (direction) => {
+  const handlePrevNext = (direction: string) => {
     const currentDate = new Date(); // Get the current date
     const currentYear = currentDate.getFullYear();
     const currentMonth = currentDate.getMonth();
@@ -155,79 +157,6 @@ const Calendar = () => {
     setDate(new Date(newYear, newMonth, 1));
     setCurrYear(newYear);
     setCurrMonth(newMonth);
-  };
-
-  const [sendData, setSendData] = useState({
-    date: "",
-    workingHours: "",
-  });
-
-  const handleInputChange = (e, day) => {
-    const newWorkingHours = parseInt(e.target.value);
-    if (newWorkingHours < 0 || newWorkingHours > 24) {
-      return;
-    }
-    const updatedDays = days.map((d) => {
-      if (d.date.toDateString() === day.date.toDateString()) {
-        return { ...d, workingHours: newWorkingHours }; // Update working hours for the specific day
-      }
-      return d;
-    });
-    setDays(updatedDays); // Update state with the new array of day objects
-    setSendData({
-      date: new Date(day.date),
-      workingHours: newWorkingHours,
-    }); // Save the new working hours to the backend
-  };
-
-  // Function to save working hours to the backend
-  const saveWorkingHours = (event) => {
-    event.preventDefault();
-
-    if (sendData.date === "" || sendData.workingHours === "") {
-      Swal.fire({
-        icon: "warning",
-        text: "Please enter working hour!",
-      });
-
-      return;
-    }
-
-    // const token = localStorage.getItem("webDualToken");
-    // const userid = localStorage.getItem("webDualUserid");
-
-    // Open Loader
-    // setOpenLoader(true);
-
-    // axios
-    //   .post(`${BACKEND_SERVER}/users/Calendar/${userid}`, sendData, {
-    //     headers: {
-    //       Authorization: `Bearer ${token}`,
-    //     },
-    //   })
-    //   .then((res) => {
-    //     setAttendanceData(res?.data?.attendance);
-
-    //     // Close Loader
-    //     setOpenLoader(false);
-
-    //     Swal.fire({
-    //       icon: "success",
-    //       text: "Calendar added successfully",
-    //     });
-    //   })
-    //   .catch((err) => {
-    //     // console.log(err);
-
-    //     // Close Loader
-    //     setOpenLoader(false);
-
-    //     Swal.fire({
-    //       icon: "error",
-    //       title: `Server Error !!`,
-    //       text: "Try again later",
-    //     });
-    //   });
   };
 
   return (
@@ -297,17 +226,17 @@ const Calendar = () => {
                 Sat
               </li>
             </ul>
-            <div
-              className="w-full flex flex-col items-center"
-              onSubmit={saveWorkingHours}
-            >
+            <div className="w-full flex flex-col items-center">
               <ul className="days w-full grid grid-cols-7 border-2 border-inset border-purple-700 shadow-lg">
                 {days.map((dayObj, index) => (
                   <li
                     key={index}
+                    onClick={() => {
+                      setSendData(dayObj);
+                    }}
                     className={`
-                    flex flex-col items-start p-2 shadow-xl text-2xl font-semibold text-center cursor-pointer border-sm
-                    ${dayObj?.inactive ? "text-gray-400" : ""}
+                    flex flex-col items-start p-2 text-2xl font-semibold text-center cursor-pointer border-sm
+                    ${dayObj?.inactive ? "text-gray-400 opacity-30" : ""}
                     ${
                       dayObj?.active
                         ? "bg-purple-500 text-slate-800 hover:bg-purple-400"
@@ -342,16 +271,12 @@ const Calendar = () => {
                     style={{
                       backgroundColor: dayObj?.workingHours > 0 ? "#fff" : "",
                       color: dayObj?.workingHours > 0 ? "#7c7979" : "",
+                      boxShadow:
+                        "rgba(0, 0, 0, 0.12) 0px 1px 3px, rgba(0, 0, 0, 0.24) 0px 1px 2px",
                     }}
                   >
                     {dayObj?.date.getDate()}
-                    <input
-                      type="text"
-                      value={
-                        dayObj?.workingHours >= 0 ? dayObj?.workingHours : ""
-                      }
-                      onChange={(e) => handleInputChange(e, dayObj)}
-                      readOnly
+                    <div
                       className="w-7 h-7 text-center bg-gray-100 font-semibold text-lg cursor-pointer focus:outline-none mt-5 self-end"
                       style={{
                         color:
@@ -361,10 +286,9 @@ const Calendar = () => {
                             ? "#202020"
                             : "",
                       }}
-                      placeholder="0"
-                      min="0"
-                      max="24"
-                    />
+                    >
+                      {dayObj?.workingHours >= 0 ? dayObj?.workingHours : ""}
+                    </div>
                   </li>
                 ))}
               </ul>
