@@ -1,15 +1,38 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { BACKEND_SERVER } from "../../Helper/BaseUrl";
 
-const Calendar = ({ setSendData, attendanceData, setAttendanceData }) => {
-  // Data from UseLoaderContext Hook
-  // const { setOpenLoader, openLoader } = useLoaderContext();
+// Define your prop types
+interface Attendance {
+  date: string;
+  workingHours: number;
+  title: string;
+  description: string;
+}
 
+interface CalendarProps {
+  setSendData: (data: unknown) => void;
+  attendanceData: Attendance[];
+  setAttendanceData: (data: Attendance[]) => void;
+}
+
+// Define the component using React.FC
+const Calendar: React.FC<CalendarProps> = ({
+  setSendData,
+  attendanceData,
+  setAttendanceData,
+}) => {
   const [date, setDate] = useState(new Date()); // Initialize date state to current date
   const [currYear, setCurrYear] = useState(date.getFullYear()); // Get current year from date
   const [currMonth, setCurrMonth] = useState(date.getMonth()); // Get current month from date
-  const [days, setDays] = useState([]); // State to store the days to be displayed in the calendar
+  const [days, setDays] = useState<[]>([]); // State to store the days to be displayed in the calendar
+  const [dayActive, setDayActive] = useState<boolean[]>([false]); // Clicking Day Active
+
+  useEffect(() => {
+    if (days) {
+      setDayActive(Array.from({ length: days.length }, () => false));
+    }
+  }, [days]);
 
   // Array of month names for display purposes
   const months = [
@@ -32,7 +55,6 @@ const Calendar = ({ setSendData, attendanceData, setAttendanceData }) => {
 
   // Fetch attendance data from the backend when the component mounts
   useEffect(() => {
-    // Fetch attendance data from the backend
     const fetchAttendanceData = () => {
       const token = localStorage.getItem("taskToken");
       const userid = localStorage.getItem("taskUserId");
@@ -59,7 +81,6 @@ const Calendar = ({ setSendData, attendanceData, setAttendanceData }) => {
   }, [currYear, currMonth, attendanceData]);
 
   const renderCalendar = () => {
-    // Calculate the necessary dates and days for the current month view
     const firstDayofMonth = new Date(currYear, currMonth, 1).getDay();
     const lastDateofMonth = new Date(currYear, currMonth + 1, 0).getDate();
     const lastDayofMonth = new Date(
@@ -71,7 +92,6 @@ const Calendar = ({ setSendData, attendanceData, setAttendanceData }) => {
 
     const daysArray = []; // Array to hold day objects
 
-    // Add days from the previous month to fill the first week
     for (let i = firstDayofMonth; i > 0; i--) {
       daysArray.push({
         date: new Date(currYear, currMonth - 1, lastDateofLastMonth - i + 1),
@@ -79,7 +99,6 @@ const Calendar = ({ setSendData, attendanceData, setAttendanceData }) => {
       });
     }
 
-    // Add days for the current month
     for (let i = 1; i <= lastDateofMonth; i++) {
       const dayDate = new Date(currYear, currMonth, i);
       const isToday =
@@ -90,7 +109,6 @@ const Calendar = ({ setSendData, attendanceData, setAttendanceData }) => {
         dayDate.toISOString().split("T")[0]
       );
 
-      // Find the working hours for the current day from attendance data
       const attendance = attendanceData?.find((att) => {
         const attDate = new Date(att.date);
         return (
@@ -102,7 +120,7 @@ const Calendar = ({ setSendData, attendanceData, setAttendanceData }) => {
 
       const isLeaveDay = attendance && attendance.workingHours === 0; // Check if working hours are 0
 
-      daysArray.push({
+      const day = {
         date: dayDate,
         active: isToday,
         isNationalHoliday,
@@ -112,14 +130,15 @@ const Calendar = ({ setSendData, attendanceData, setAttendanceData }) => {
         title: attendance ? attendance.title : "", // Set title or empty string if not found
         description: attendance ? attendance.description : "", // Set description or empty string if not found
         isWeekend: dayDate.getDay() === 0 || dayDate.getDay() === 6, // Check if Saturday or Sunday
-      });
+      };
 
-      if (daysArray[i].active) {
-        setSendData(daysArray[i]);
+      daysArray.push(day);
+
+      if (day.active) {
+        setSendData(day);
       }
     }
 
-    // Add days from the next month to fill the last week
     for (let i = lastDayofMonth; i < 6; i++) {
       daysArray.push({
         date: new Date(currYear, currMonth + 1, i - lastDayofMonth + 1),
@@ -130,22 +149,12 @@ const Calendar = ({ setSendData, attendanceData, setAttendanceData }) => {
     setDays(daysArray); // Update state with the array of day objects
   };
 
-  const handlePrevNext = (direction: string) => {
-    const currentDate = new Date(); // Get the current date
-    const currentYear = currentDate.getFullYear();
-    const currentMonth = currentDate.getMonth();
+  const handlePrevNext = (direction: "prev" | "next") => {
     // Calculate the new month and year based on the direction
     let newMonth = direction === "prev" ? currMonth - 1 : currMonth + 1;
     let newYear = currYear;
-    // Prevent navigation beyond the previous month
-    if (newYear === currentYear && newMonth < currentMonth - 1) {
-      newMonth = currentMonth - 1;
-    }
-    // Prevent navigation beyond the next month
-    if (newYear === currentYear && newMonth > currentMonth + 1) {
-      newMonth = currentMonth + 1;
-    }
-    // Adjust year and month if necessary
+
+    // Adjust the year and month if necessary
     if (newMonth < 0) {
       newMonth = 11;
       newYear -= 1;
@@ -153,16 +162,24 @@ const Calendar = ({ setSendData, attendanceData, setAttendanceData }) => {
       newMonth = 0;
       newYear += 1;
     }
+
     // Set the new date, year, and month
     setDate(new Date(newYear, newMonth, 1));
     setCurrYear(newYear);
     setCurrMonth(newMonth);
   };
 
+  const toogleDayActive = (i: number) => {
+    setDayActive((prev) => {
+      // Use map to create a new array where only the index i is toggled
+      return prev.map((_, idx) => (idx === i ? true : false));
+    });
+  };
+
   return (
     <>
-      <div className="2xl:w-3/5 xl:w-1/2 lg:w-1/2 md:w-full sm:w-full flex flex-col items-center bg-white p-5 self-start h-dvh overflow-auto">
-        <div className="w-2/3 flex flex-col items-center bg-white my-5">
+      <div className="2xl:w-3/5 xl:w-3/5 lg:w-1/2 md:w-full max-md:w-full flex flex-col items-center bg-white p-5 self-start h-dvh max-md:h-auto overflow-auto select-none">
+        <div className="2xl:w-2/3 xl:w-3/4 lg:w-full max-md:w-full flex flex-col items-center bg-white my-5">
           <header className="w-full flex justify-evenly items-center my-2">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -182,7 +199,7 @@ const Calendar = ({ setSendData, attendanceData, setAttendanceData }) => {
                 clipRule="evenodd"
               />
             </svg>
-            <p className="text-3xl font-extrabold">{`${months[currMonth]} ${currYear}`}</p>
+            <p className="text-3xl font-extrabold text-center">{`${months[currMonth]} ${currYear}`}</p>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
@@ -233,9 +250,11 @@ const Calendar = ({ setSendData, attendanceData, setAttendanceData }) => {
                     key={index}
                     onClick={() => {
                       setSendData(dayObj);
+                      toogleDayActive(index);
                     }}
                     className={`
-                    flex flex-col items-start p-2 text-2xl font-semibold text-center cursor-pointer border-sm
+                    flex flex-col items-start p-2 text-2xl font-semibold text-center cursor-pointer border-sm active:bg-orange-400
+                    
                     ${dayObj?.inactive ? "text-gray-400 opacity-30" : ""}
                     ${
                       dayObj?.active
@@ -255,7 +274,7 @@ const Calendar = ({ setSendData, attendanceData, setAttendanceData }) => {
                         : ""
                     }
                     ${
-                      dayObj?.isWeekend
+                      dayObj?.isWeekend && !dayObj?.active
                         ? "bg-yellow-300 hover:bg-yellow-200"
                         : ""
                     }
@@ -263,13 +282,15 @@ const Calendar = ({ setSendData, attendanceData, setAttendanceData }) => {
                       !dayObj?.active &&
                       !dayObj?.isNationalHoliday &&
                       !dayObj?.isLeaveDay &&
-                      !dayObj?.isWeekend
+                      !dayObj?.isWeekend &&
+                      !dayActive[index]
                         ? "bg-white text-gray-500 hover:bg-gray-100"
                         : ""
                     }
+
+                     ${dayActive[index] === true ? "bg-orange-400" : ""}
                   `}
                     style={{
-                      backgroundColor: dayObj?.workingHours > 0 ? "#fff" : "",
                       color: dayObj?.workingHours > 0 ? "#7c7979" : "",
                       boxShadow:
                         "rgba(0, 0, 0, 0.12) 0px 1px 3px, rgba(0, 0, 0, 0.24) 0px 1px 2px",
@@ -296,16 +317,16 @@ const Calendar = ({ setSendData, attendanceData, setAttendanceData }) => {
           </div>
 
           <div className="colorCode w-full flex justify-center items-center">
-            <div className="w-1/4 flex justify-center items-center text-lg h-20 shadow-md bg-white mt-5 cursor-pointer border-t-4 border-teal-500 hover:bg-teal-500">
+            <div className="w-1/4 flex justify-center items-center text-lg h-20 shadow-md bg-white mt-5 cursor-pointer border-t-4 border-teal-500 hover:bg-teal-500 text-center">
               Filled Hours
             </div>
-            <div className="w-1/4 flex justify-center items-center text-lg h-20 shadow-md bg-white mt-5 cursor-pointer border-t-4 border-red-300 hover:bg-red-300">
+            <div className="w-1/4 flex justify-center items-center text-lg h-20 shadow-md bg-white mt-5 cursor-pointer border-t-4 border-red-300 hover:bg-red-300 text-center">
               Leave Day
             </div>
-            <div className="w-1/4 flex justify-center items-center text-lg h-20 shadow-md bg-white mt-5 cursor-pointer border-t-4 border-yellow-300 hover:bg-yellow-300">
+            <div className="w-1/4 flex justify-center items-center text-lg h-20 shadow-md bg-white mt-5 cursor-pointer border-t-4 border-yellow-300 hover:bg-yellow-300 text-center">
               Weekend
             </div>
-            <div className="w-1/4 flex justify-center items-center text-lg h-20 shadow-md bg-white mt-5 cursor-pointer border-t-4 border-blue-200 hover:bg-blue-200">
+            <div className="w-1/4 flex justify-center items-center text-lg h-20 shadow-md bg-white mt-5 cursor-pointer border-t-4 border-blue-200 hover:bg-blue-200 text-center">
               Holiday
             </div>
           </div>

@@ -100,8 +100,8 @@ const SignUp = () => {
           backgroundSize: "cover",
         }}
       >
-        <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
-          <div className="flex items-center mb-6 text-3xl font-semibold text-gray-100">
+        <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:min-h-dvh lg:py-0">
+          <div className="flex items-center my-6 text-3xl font-semibold text-gray-100">
             <img
               className="w-10 h-10 mr-2"
               src="https://cdn-icons-png.flaticon.com/512/906/906334.png"

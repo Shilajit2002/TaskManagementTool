@@ -2,7 +2,17 @@ import axios from "axios";
 import { BACKEND_SERVER } from "../../Helper/BaseUrl";
 import { toast, ToastContainer } from "react-toastify";
 
-const Task = ({ sendData, setSendData, setAttendanceData }) => {
+interface CalendarProps {
+  setSendData: (data: unknown) => void;
+  sendData: (data: unknown) => void;
+  setAttendanceData: (data: unknown) => void;
+}
+
+const Task: React.FC<CalendarProps> = ({
+  sendData,
+  setSendData,
+  setAttendanceData,
+}) => {
   const notifyWarn = (msg: string) =>
     toast.warn(`${msg}`, {
       position: "top-center",
@@ -52,10 +62,11 @@ const Task = ({ sendData, setSendData, setAttendanceData }) => {
       if (numericValue < 0 || numericValue > 24) {
         return;
       }
+
       // Update state with numeric value for workingHours
       setSendData({
         ...sendData,
-        [name]: numericValue || "",
+        [name]: numericValue || numericValue === 0 ? numericValue : "",
       });
     } else {
       // Update state with the string value for other fields
@@ -105,9 +116,9 @@ const Task = ({ sendData, setSendData, setAttendanceData }) => {
         pauseOnHover
         theme="dark"
       />
-      <div className="2xl:w-2/5 xl:w-1/2 lg:w-1/2 md:w-full h-dvh overflow-auto sm:w-full flex flex-col items-center bg-slate-900 text-white p-5 self-start shadow-lg">
+      <div className="2xl:w-2/5 xl:w-2/5 lg:w-1/2 md:w-full max-md:w-full h-dvh max-md:h-auto overflow-auto flex flex-col items-center bg-slate-900 text-white p-5 self-start shadow-lg">
         <form
-          className="w-2/3 flex flex-col items-center p-5"
+          className="2xl:w-2/3 xl:w-3/4 lg:w-full max-md:w-full flex flex-col items-center p-5"
           onSubmit={handleSheetFunc}
         >
           <p className="text-3xl font-bold">Task Details</p>
@@ -125,7 +136,7 @@ const Task = ({ sendData, setSendData, setAttendanceData }) => {
               id="title"
               placeholder="Enter task title"
               className="p-2 my-3 w-full border rounded shadow focus:outline-none text-slate-900"
-              value={sendData?.title}
+              value={sendData?.title || ""}
               onChange={handleChange}
             />
           </div>
@@ -143,7 +154,11 @@ const Task = ({ sendData, setSendData, setAttendanceData }) => {
               id="hours"
               placeholder="Enter working hours (0-24)"
               className="p-2 my-3 w-full border rounded shadow focus:outline-none text-slate-900"
-              value={sendData?.workingHours}
+              value={
+                sendData?.workingHours || sendData?.workingHours === 0
+                  ? sendData?.workingHours
+                  : ""
+              }
               onChange={handleChange}
               required
             />
@@ -161,7 +176,7 @@ const Task = ({ sendData, setSendData, setAttendanceData }) => {
               id="description"
               placeholder="Enter task description"
               className="p-2 my-3 w-full h-52 border rounded shadow focus:outline-none text-slate-900"
-              value={sendData?.description}
+              value={sendData?.description || ""}
               onChange={(e) => {
                 setSendData({
                   ...sendData,

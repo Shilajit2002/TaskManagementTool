@@ -7,7 +7,7 @@ const Dashboard = () => {
   const [attendanceData, setAttendanceData] = useState([]); // State to store attendance data fetched from the backend
   return (
     <>
-      <div className="w-full min-h-dvh bg-white flex justify-evenly items-center">
+      <div className="w-full min-h-dvh bg-white flex justify-evenly items-center max-md:flex-col">
         <Calendar
           setSendData={setSendData}
           attendanceData={attendanceData}
