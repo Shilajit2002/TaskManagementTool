@@ -58,7 +58,7 @@ const SignIn = () => {
             password: "",
           });
 
-          window.location.href = "/";
+          window.location.href = "/dashboard";
         })
         .catch((err) => {
           notifyError(err?.response?.data?.msg);
